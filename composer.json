@@ -1,5 +1,5 @@
 {
-   "name": "Traackr/SqlMigration",
+   "name": "Traackr/sql-migration",
     "type": "cakephp-plugin",
     "require": {
         "composer/installers": "~1.0"
