@@ -153,7 +153,8 @@ class SqlMigrationShell extends Shell {
      * skipped previously
      */
    public function update() { 
-      $sqlFolder = new Folder(APP.'Config/Sql'); 
+      $sqlFolder = new Folder(APP.'Config/Sql');
+      $updateErrors = array();
       list($dirs, $files)     = $sqlFolder->read();
       $upgrades = array();
       foreach ($files as $i => $file) { 
@@ -173,13 +174,17 @@ class SqlMigrationShell extends Shell {
       foreach ($allVersions as $v ) {
          if ( $v['SchemaVersion']['status'] === $this->skippedStatus && isset($upgrades[$v['SchemaVersion']['version']]) ) {
             $this->out('Running skipped version: ' . $upgrades[$v['SchemaVersion']['version']]);
-            if ( !$this->executeSql($v['SchemaVersion']['version']) ) {
-               break;
+            try {
+              if ( !$this->executeSql($v['SchemaVersion']['version']) ) {
+                 break;
+              }
+            } catch(Exception $e) {
+              array_push($updateErrors, $e);
             }
          }
       }
       // Run upgrades up to the highest/latest verion of the upgrade files found
-      for ($currentVersion = $this->getVersion(); $currentVersion < $version; $currentVersion = $this->getVersion()) { 
+      for ($currentVersion = $this->getVersion(); $currentVersion < $version; $currentVersion++) { 
          $this->out('Currently at Version '.$currentVersion); 
          $this->out('Updating to Version '.($currentVersion+1));
          if ( !isset($upgrades[$currentVersion+1]) ) {
@@ -187,10 +192,18 @@ class SqlMigrationShell extends Shell {
             $this->setVersion((int)($currentVersion+1), $this->skippedStatus);
             continue;
          }
-         if ( !$this->executeSql($currentVersion+1) ) {
-            break;
+         try {
+           if ( !$this->executeSql($currentVersion+1) ) {
+              break;
+           }
+         } catch(Exception $e) {
+            array_push($updateErrors, $e);
          }
-      } 
+      }
+      $numErrors = count($updateErrors);
+      if ($numErrors) {
+        $this->error("There were " . $numErrors . " errors found while trying to upgrade your database.  Please investigate.");
+      }
       $this->out('Done with upgrades. Now at version '.$this->getVersion()); 
    } // End function update
 
@@ -214,7 +227,13 @@ class SqlMigrationShell extends Shell {
          $this->out('Launching MySQL to execute SQL');
          $database = ConnectionManager::getDataSource('default')->config;
          $sql_file = APP.'Config/Sql/upgrade-'.$version.'.sql';
-         exec("mysql --host=${database['host']} --user=${database['login']} --password=${database['password']} --database=${database['database']} < ${sql_file}");
+         exec("mysql --host=${database['host']} --user=${database['login']} --password=${database['password']} --database=${database['database']} < ${sql_file}", $sqlOutput, $execReturn);
+         // In the case of an error code, return an error to the caller
+         if ($execReturn > 0) {
+           $this->out('An error occurred trying to execute ' . $sql_file);
+           $e =  new Exception("An error occurred trying to execute   " . $sql_file, $execReturn);
+           throw $e;
+         }
          $this->setVersion((int)($version), $this->successStatus);     
       } 
       return true;
