@@ -1,17 +1,17 @@
-<?php 
+<?php
 
 /*
  * Based on:
  * http://bakery.cakephp.org/articles/erma/2010/01/05/cakephp-sql-shell-simple-and-powerful
  */
 
-App::uses('Folder', 'Utility'); 
+App::uses('Folder', 'Utility');
 
 App::uses('ConnectionManager', 'Model');
 App::uses('SchemaVersion', 'SqlMigration.Model');
 
-class SqlMigrationShell extends Shell { 
-         
+class SqlMigrationShell extends Shell {
+
    /**
      * Connection used
      *
@@ -27,7 +27,7 @@ class SqlMigrationShell extends Shell {
    private $myName = 'SqlMigration';
 
    /**
-     * Table holding schema version 
+     * Table holding schema version
      *
      * @var string
      */
@@ -35,14 +35,14 @@ class SqlMigrationShell extends Shell {
 
 
    /**
-     * Sucess status 
-     * 
+     * Sucess status
+     *
      */
-   private $successStatus = 'STATUS';
+   private $successStatus = 'SUCCESS';
 
    /**
      * Skipped status
-     *  
+     *
      */
    private $skippedStatus = 'SKIPPED';
 
@@ -57,10 +57,10 @@ class SqlMigrationShell extends Shell {
       * Overridding this method will prevent default welcome message
       */
    public function _welcome() {
-      
+
       $this->out('SQL Migration plugin');
       $this->schemaVersionModel = new SchemaVersion();
-   
+
    } // End function _welcome()
 
 
@@ -78,9 +78,9 @@ class SqlMigrationShell extends Shell {
      * Get latest version
      * @return int Latest version number
      */
-   private function getVersion() { 
+   private function getVersion() {
       $latest = $this->schemaVersionModel->find('first', array(
-          'order' => array('created DESC'),
+          'order' => array('version DESC'),
           'limit' => 1
       ));
       if ( $latest && is_numeric($latest['SchemaVersion']['version']) ) {
@@ -90,19 +90,19 @@ class SqlMigrationShell extends Shell {
          $this->out('No version found. Assuming 0.');
          return 0;
       }
-   } // End function getVersion()  
-   
+   } // End function getVersion()
+
 
    /**
      * Get all version history
      * @return int Latest version number
      */
-   private function getAllVersions() { 
+   private function getAllVersions() {
       $all = $this->schemaVersionModel->find('all', array(
-          'order' => array('created ASC')
+          'order' => array('version ASC')
       ));
       return $all;
-   } // End function getAllVersions()  
+   } // End function getAllVersions()
 
 
    /**
@@ -111,7 +111,7 @@ class SqlMigrationShell extends Shell {
      * @param int $version Version
      * @param String $status Status of upgrade to version
      */
-   private function setVersion($version, $status) { 
+   private function setVersion($version, $status) {
       $existingVersion = $this->schemaVersionModel->findByVersion($version);
       if ( $existingVersion ) {
           $this->schemaVersionModel->id = $existingVersion['SchemaVersion']['id'];
@@ -122,7 +122,7 @@ class SqlMigrationShell extends Shell {
                'version' => $version,
                'status' => $status));
           $this->schemaVersionModel->create();
-          $saved = $this->schemaVersionModel->save($data); 
+          $saved = $this->schemaVersionModel->save($data);
           if ( !$saved ) {
             $this->out('Unable to set version');
             $this->_stop();
@@ -136,37 +136,37 @@ class SqlMigrationShell extends Shell {
      * @param  int $verion Version number
      * @return String SQL to run
      */
-   private function getSql($version) { 
-      if (($text = file_get_contents($filename = APP.'Config/Sql/upgrade-'.$version.'.sql')) !== false) { 
-         return $text; 
-      } else { 
-         $this->out("Couldn't load contents of file {$filename}, unable to uograde/downgrade"); 
-         $this->_stop(); 
-      } 
+   private function getSql($version) {
+      if (($text = file_get_contents($filename = APP.'Config/Sql/upgrade-'.$version.'.sql')) !== false) {
+         return $text;
+      } else {
+         $this->out("Couldn't load contents of file {$filename}, unable to uograde/downgrade");
+         $this->_stop();
+      }
    }  // End function getSql()
 
-    
+
    /**
      * Run the update.
      * This will try to run all upgrade SQL file in order of version.
      * It wil also try to run./re-run any version that might have been
      * skipped previously
      */
-   public function update() { 
+   public function update() {
       $sqlFolder = new Folder(APP.'Config/Sql');
       $updateErrors = array();
       list($dirs, $files)     = $sqlFolder->read();
       $upgrades = array();
-      foreach ($files as $i => $file) { 
-         if (preg_match( '/upgrade-(\d+)\.sql$/', $file, $matches))  { 
+      foreach ($files as $i => $file) {
+         if (preg_match( '/upgrade-(\d+)\.sql$/', $file, $matches))  {
             $upgrades[(int)$matches[1]] = $file;
-         } 
-      } 
-      ksort($upgrades);      
+         }
+      }
+      ksort($upgrades);
       $version = max(array_keys($upgrades));
       $this->out('Upgrading up to version : '.$version);
 
-      // Get all versions 
+      // Get all versions
       $allVersions = $this->getAllVersions();
 
       // Try to run missing/skipped versions
@@ -184,8 +184,8 @@ class SqlMigrationShell extends Shell {
          }
       }
       // Run upgrades up to the highest/latest verion of the upgrade files found
-      for ($currentVersion = $this->getVersion(); $currentVersion < $version; $currentVersion++) { 
-         $this->out('Currently at Version '.$currentVersion); 
+      for ($currentVersion = $this->getVersion(); $currentVersion < $version; $currentVersion++) {
+         $this->out('Currently at Version '.$currentVersion);
          $this->out('Updating to Version '.($currentVersion+1));
          if ( !isset($upgrades[$currentVersion+1]) ) {
             $this->out('No upgrade file for version '.($currentVersion+1).'. Skipping');
@@ -204,7 +204,7 @@ class SqlMigrationShell extends Shell {
       if ($numErrors) {
         $this->error("There were " . $numErrors . " errors found while trying to upgrade your database.  Please investigate.");
       }
-      $this->out('Done with upgrades. Now at version '.$this->getVersion()); 
+      $this->out('Done with upgrades. Now at version '.$this->getVersion());
    } // End function update
 
    /**
@@ -213,17 +213,18 @@ class SqlMigrationShell extends Shell {
      * @return boolean False if user choose to not run the SQL. 'Skip' will return true
      */
    private function executeSql($version) {
-      $this->out('Executing sql:'); 
-      $this->hr(); 
-      $this->out($sql = $this->getSql($version)); 
+      $this->out('Executing sql:');
+      $this->hr();
+      $this->out($sql = $this->getSql($version));
       $this->hr();
       $a = $this->in('Execute SQL? [y/n/s]');
-      if ( $a === 'n') { 
-         return false; 
+      if ( $a === 'n') {
+         return false;
       }
       else if ( $a === 's') {
+         $this->setVersion((int)($version), $this->skippedStatus);
          return true;
-      } else { 
+      } else {
          $this->out('Launching MySQL to execute SQL');
          $database = ConnectionManager::getDataSource('default')->config;
          $sql_file = APP.'Config/Sql/upgrade-'.$version.'.sql';
@@ -234,8 +235,8 @@ class SqlMigrationShell extends Shell {
            $e =  new Exception("An error occurred trying to execute   " . $sql_file, $execReturn);
            throw $e;
          }
-         $this->setVersion((int)($version), $this->successStatus);     
-      } 
+         $this->setVersion((int)($version), $this->successStatus);
+      }
       return true;
    } // End function executeSql()
 
@@ -269,6 +270,10 @@ class SqlMigrationShell extends Shell {
       $command = 'schema update --quiet --plugin '.$this->myName.' --connection ' . $this->connection;
       // Dispatch to shell
       $this->dispatchShell($command);
+
+      // Update incorrect status
+      // This is a typo in original code when 'SUCCESS' as set at 'STATUS'
+      $this->schemaVersionModel->query("UPDATE schema_versions SET STATUS = '".$this->successStatus."' WHERE STATUS = 'STATUS'");
       $this->out('Updated');
 
    } // End function updateMigrationchema()
@@ -287,5 +292,5 @@ class SqlMigrationShell extends Shell {
 
    } // End function createMigrationchema()
 
-} 
-?> 
+}
+?>
