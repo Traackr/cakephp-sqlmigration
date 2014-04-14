@@ -1,7 +1,27 @@
 {
    "name": "traackr/sql-migration",
-    "type": "cakephp-plugin",
-    "require": {
-        "composer/installers": "~1.0"
-    }
+   "description": "SQL migration plugin for CakePHP",
+   "type": "cakephp-plugin",
+   "keywrods": [
+      "cakephp",
+      "sql",
+      "sql migration",
+      "sql upgrade",
+      "data migration",
+      "data upgrade",
+      "traackr"
+   ],
+   "homepage": "https://traackr.com/",
+   "authors": [
+      {
+         "name": "David Chancogne",
+         "email": "dchancogne@traackr.com",
+         "homepage": "http://twitter.com/dchancogne"
+      }
+   ],
+   "require-dev": {
+      "php": ">=5.3",
+      "composer/installers": "~1.0",
+      "cakephp/cakephp": "2.4.*"
+   }
 }
