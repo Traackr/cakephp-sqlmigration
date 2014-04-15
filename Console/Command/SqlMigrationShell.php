@@ -229,6 +229,9 @@ class SqlMigrationShell extends Shell {
          $database = ConnectionManager::getDataSource('default')->config;
          $sql_file = APP.'Config/Sql/upgrade-'.$version.'.sql';
          exec("mysql --host=${database['host']} --user=${database['login']} --password=${database['password']} --database=${database['database']} < ${sql_file}", $sqlOutput, $execReturn);
+         foreach ( $sqlOutput as $line) {
+            $this->out($line);
+         }
          // In the case of an error code, return an error to the caller
          if ($execReturn > 0) {
            $this->out('An error occurred trying to execute ' . $sql_file);
