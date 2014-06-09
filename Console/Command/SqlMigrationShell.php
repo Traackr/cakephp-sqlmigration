@@ -228,7 +228,9 @@ class SqlMigrationShell extends Shell {
          $this->out('Launching MySQL to execute SQL');
          $database = ConnectionManager::getDataSource('default')->config;
          $sql_file = APP.'Config/Sql/upgrade-'.$version.'.sql';
-         exec("mysql --host=${database['host']} --user=${database['login']} --password=${database['password']} --database=${database['database']} < ${sql_file}", $sqlOutput, $execReturn);
+         exec("mysql -vv --host=${database['host']} --user=${database['login']} --password=${database['password']} --database=${database['database']} < ${sql_file}", $sqlOutput, $execReturn);
+         // The '-vv' option above is required for MySQL to generate output we
+         // can display
          foreach ( $sqlOutput as $line) {
             $this->out($line);
          }
