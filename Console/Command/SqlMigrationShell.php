@@ -73,6 +73,23 @@ class SqlMigrationShell extends Shell {
 
    } // End function main()
 
+   
+   /**
+     * Attempt to get a named mysql lock.
+     * Throws an exception on failure
+     * @return void
+     * @throws RuntimeException If unable to obtain a lock
+     */
+   public function getLock($timeout = 300) {
+      $this->out('Attempting to obtain database lock...');
+      $ds = ConnectionManager::getDataSource($this->connection);
+      $lockCmd = "GET_LOCK('Cake.Plugin.SqlMigration', $timeout)";
+      $result = $ds->fetchRow("SELECT $lockCmd");
+      if (empty($result[0][$lockCmd]) || $result[0][$lockCmd] !== '1') {
+         throw new \RuntimeException('Unable to obtain database lock for SqlMigration.');
+      }
+   }
+   
 
    /**
      * Get latest version
@@ -153,6 +170,7 @@ class SqlMigrationShell extends Shell {
      * skipped previously
      */
    public function update() {
+      $this->getLock();
       $sqlFolder = new Folder(APP.'Config/Sql');
       $updateErrors = array();
       list($dirs, $files)     = $sqlFolder->read();
@@ -252,6 +270,7 @@ class SqlMigrationShell extends Shell {
      */
    public function setup() {
 
+      $this->getLock();
       $ds = ConnectionManager::getDataSource($this->connection);
       $result = $ds->execute("SHOW TABLES LIKE '".$this->tableName."'")->fetch();
       if ( empty($result) ) {
