@@ -53,12 +53,20 @@ class SqlMigrationShell extends Shell {
    private $schemaVersionModel;
 
 
+   /**
+    * Timeout in seconds to wait for a DB lock
+    * @var int
+    */
+   private $lockTimeout;
+
+
     /**
       * Overridding this method will prevent default welcome message
       */
    public function _welcome() {
 
       $this->out('SQL Migration plugin');
+      $this->lockTimeout = $this->param('lock-timeout') ?? 3600;
       $this->schemaVersionModel = new SchemaVersion();
 
    } // End function _welcome()
@@ -72,6 +80,46 @@ class SqlMigrationShell extends Shell {
       $this->update();
 
    } // End function main()
+
+
+
+   /**
+     * Sets up the required / available command line parameters and flags
+     * @return ConsoleOptionParser
+     */
+   public function getOptionParser(): \ConsoleOptionParser
+   {
+      $parser = parent::getOptionParser();
+
+      $parser->addOptions([
+         'lock-timeout' => [
+            'short' => 't',
+            'help' => 'Timeout in seconds to wait for a DB lock.'
+         ]
+      ]);
+
+      return $parser;
+   }
+
+
+   /**
+     * Attempt to get a named mysql lock.
+     * Throws an exception on failure
+     * Locks are released implicitly when the mysql session is terminated (when
+     * this script exits).
+     * https://dev.mysql.com/doc/refman/5.7/en/locking-functions.html#function_get-lock
+     * @return void
+     * @throws RuntimeException If unable to obtain a lock
+     */
+   public function getLock() {
+      $this->out('Attempting to obtain database lock...');
+      $ds = ConnectionManager::getDataSource($this->connection);
+      $lockCmd = "GET_LOCK('Cake.Plugin.SqlMigration', $this->lockTimeout)";
+      $result = $ds->fetchRow("SELECT $lockCmd");
+      if (empty($result[0][$lockCmd]) || $result[0][$lockCmd] !== '1') {
+         throw new \RuntimeException('Unable to obtain database lock for SqlMigration.');
+      }
+   }
 
 
    /**
@@ -153,6 +201,7 @@ class SqlMigrationShell extends Shell {
      * skipped previously
      */
    public function update() {
+      $this->getLock();
       $sqlFolder = new Folder(APP.'Config/Sql');
       $updateErrors = array();
       list($dirs, $files)     = $sqlFolder->read();
@@ -252,6 +301,7 @@ class SqlMigrationShell extends Shell {
      */
    public function setup() {
 
+      $this->getLock();
       $ds = ConnectionManager::getDataSource($this->connection);
       $result = $ds->execute("SHOW TABLES LIKE '".$this->tableName."'")->fetch();
       if ( empty($result) ) {
